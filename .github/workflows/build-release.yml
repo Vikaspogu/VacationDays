@@ -10,27 +10,22 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: "📥 Check-out"
         uses: actions/checkout@v4
-
-      - name: Set up JDK 1.8
+      - name: "🧪 Gradle Wrapper Validation"
+        uses: gradle/wrapper-validation-action@v3
+      - name: "🧰 Install JDK"
         uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
-          java-version: '17'
-
-      - name: Change wrapper permissions
+          distribution: 'adopt'
+          java-version: 17
+          java-package: jdk
+      - name: "🧰 Setup Android SDK"
+        uses: android-actions/setup-android@v3
+      - name: "🦸 Make gradlew executable"
         run: chmod +x ./gradlew
-
-      - name: Run Tests
-        run: ./gradlew test
-
-      - name: Build Project
-        run: ./gradlew build
-
       - name: Build Release AAB
         run: ./gradlew bundleRelease
-
       - uses: r0adkll/sign-android-release@v1
         name: Sign app APK
         id: sign_app
