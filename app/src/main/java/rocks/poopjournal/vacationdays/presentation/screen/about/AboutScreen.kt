@@ -27,6 +27,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -151,7 +152,7 @@ private fun TopBar(
                 modifier = Modifier.padding(top = 30.dp, start = 10.dp, end = 10.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Rounded.ArrowBack,
+                    imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
                     contentDescription = "Back",
                     tint = Color.White
                 )
@@ -238,7 +239,8 @@ private fun TopBar(
                 }
             }
 
-            ClickableText(text = stylizedPoetry, onClick = {})
+            Text(stylizedPoetry)
+//            ClickableText(text = stylizedPoetry, onClick = {})
         }
     }
 }

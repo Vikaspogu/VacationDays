@@ -78,6 +78,7 @@ fun MyVacationDays2Theme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
+            @Suppress("DEPRECATION")
             window.statusBarColor =  if(darkTheme) darkPrimary.toArgb() else primary.toArgb() // change color status bar here
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
         }
