@@ -65,3 +65,9 @@ val Typography = Typography(
 
     */
 )
+
+var caption = TextStyle(
+    fontFamily = DMSansFamily,
+    fontWeight = FontWeight.Normal,
+    fontSize = 12.sp
+)

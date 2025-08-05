@@ -1,5 +1,6 @@
 package rocks.poopjournal.vacationdays.presentation.screen.home
 
+import android.annotation.SuppressLint
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.animateColorAsState
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -52,7 +54,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -70,6 +74,7 @@ import rocks.poopjournal.vacationdays.presentation.component.CustomTab
 import rocks.poopjournal.vacationdays.presentation.navigation.About_Screen
 import rocks.poopjournal.vacationdays.presentation.navigation.Add_Screen
 import rocks.poopjournal.vacationdays.presentation.navigation.Setting_Screen
+import rocks.poopjournal.vacationdays.presentation.ui.theme.caption
 import rocks.poopjournal.vacationdays.presentation.ui.theme.gray
 import java.time.LocalDate
 import java.time.YearMonth
@@ -105,64 +110,76 @@ fun HomeScreen(viewModel: HomeViewModel = hiltViewModel(), navHostController: Na
         is VacData.Success -> _data.vacationsNumber
     }
 
-    Scaffold(
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { navHostController.navigate(Add_Screen) },
-                shape = CircleShape,
-                containerColor = MaterialTheme.colorScheme.surface,
-                contentColor = MaterialTheme.colorScheme.background
-            ) {
-                Icon(imageVector = Icons.Default.Add, contentDescription = "Add")
-            }
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        content = { padding ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-            ) {
-                TopBar(
-                    selectedTab = selectedTab,
-                    onTabSelected = setSelectedTab,
-                    navHostController = navHostController,
-                    total = totalHolidays,
-                    vacationDays = vacationDays,
-                    sickDays = sickDays,
-                    isSickEnabled = viewModel.themeSetting.isFeatureEnabled
-                )
-                val deleteMessage = stringResource(R.string.delete_vacation)
-                val actionLabel = stringResource(R.string.undo)
-                when (selectedTab) {
-                    0 -> TimelineView(
-                        vacationList = vacation,
-                        onDelete = {
-                            coroutineScope.launch {
-                                viewModel.deleteVacation(it)
-                                val result = snackbarHostState.showSnackbar(
-                                    message = deleteMessage,
-                                    actionLabel = actionLabel,
-                                    duration = SnackbarDuration.Short
-                                )
-                                if (result == SnackbarResult.ActionPerformed) {
-                                    viewModel.restoreVacation(it)
-                                }
+    Scaffold(floatingActionButton = {
+        FloatingActionButton(
+            onClick = { navHostController.navigate(Add_Screen) },
+            shape = CircleShape,
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.background
+        ) {
+            Icon(imageVector = Icons.Default.Add, contentDescription = "Add")
+        }
+    }, snackbarHost = { SnackbarHost(snackbarHostState) }, content = { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            TopBar(
+                selectedTab = selectedTab,
+                onTabSelected = setSelectedTab,
+                navHostController = navHostController,
+                total = totalHolidays,
+                vacationDays = vacationDays,
+                sickDays = sickDays,
+                isSickEnabled = viewModel.themeSetting.isFeatureEnabled
+            )
+            val deleteMessage = stringResource(R.string.delete_vacation)
+            val actionLabel = stringResource(R.string.undo)
+            when (selectedTab) {
+                0 -> TimelineView(
+                    vacationList = vacation, onDelete = {
+                        coroutineScope.launch {
+                            viewModel.deleteVacation(it)
+                            val result = snackbarHostState.showSnackbar(
+                                message = deleteMessage,
+                                actionLabel = actionLabel,
+                                duration = SnackbarDuration.Short
+                            )
+                            if (result == SnackbarResult.ActionPerformed) {
+                                viewModel.restoreVacation(it)
                             }
-                        })
+                        }
+                    }, holidayList = false
+                )
 
-                    1 -> CalenderView(
-                        holidays = vacation,
-                        showWeekDaysHeader = showWeekDateHeader,
-                        focusOnDate = LocalDate.now()
-                    )
-                }
+                1 -> TimelineView(
+                    vacationList = vacation.filter { it.category == "Holiday" }, onDelete = {
+                        coroutineScope.launch {
+                            viewModel.deleteVacation(it)
+                            val result = snackbarHostState.showSnackbar(
+                                message = deleteMessage,
+                                actionLabel = actionLabel,
+                                duration = SnackbarDuration.Short
+                            )
+                            if (result == SnackbarResult.ActionPerformed) {
+                                viewModel.restoreVacation(it)
+                            }
+                        }
+                    }, holidayList = true
+                )
+
+                2 -> CalenderView(
+                    holidays = vacation,
+                    showWeekDaysHeader = showWeekDateHeader,
+                    focusOnDate = LocalDate.now()
+                )
             }
-        })
+        }
+    })
 
 
 }
-
 
 @Composable
 private fun TopBar(
@@ -177,6 +194,7 @@ private fun TopBar(
     var expanded by remember { mutableStateOf(false) }
     val timeline = stringResource(R.string.timeline)
     val calendar = stringResource(R.string.calendar)
+    val holidays = stringResource(R.string.holidays)
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -268,58 +286,52 @@ private fun TopBar(
                         expanded = false
                     },
                 ) {
-                    DropdownMenuItem(
-                        text = {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(5.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_problem),
-                                    contentDescription = "About",
-                                    tint = MaterialTheme.colorScheme.onSecondaryContainer
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = stringResource(id = R.string.about),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                                )
-                            }
-                        },
-                        onClick = {
-                            expanded = false
-                            navHostController.navigate(About_Screen)
+                    DropdownMenuItem(text = {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(5.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_problem),
+                                contentDescription = "About",
+                                tint = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = stringResource(id = R.string.about),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
                         }
-                    )
-                    DropdownMenuItem(
-                        text = {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(5.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_settings),
-                                    contentDescription = "Settings",
-                                    tint = MaterialTheme.colorScheme.onSecondaryContainer
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = stringResource(id = R.string.settings),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                                )
-                            }
-                        },
-                        onClick = {
-                            expanded = false
-                            navHostController.navigate(Setting_Screen)
+                    }, onClick = {
+                        expanded = false
+                        navHostController.navigate(About_Screen)
+                    })
+                    DropdownMenuItem(text = {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(5.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_settings),
+                                contentDescription = "Settings",
+                                tint = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = stringResource(id = R.string.settings),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
                         }
-                    )
+                    }, onClick = {
+                        expanded = false
+                        navHostController.navigate(Setting_Screen)
+                    })
                 }
             }
         }
@@ -327,13 +339,14 @@ private fun TopBar(
         // Custom Tab below
         Row(
             modifier = Modifier
+                .padding(start = 10.dp, end = 10.dp)
                 .fillMaxWidth()
                 .padding(vertical = 10.dp),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
             CustomTab(
-                items = listOf(timeline, calendar),
+                items = listOf(timeline, holidays, calendar),
                 selectedItemIndex = selectedTab,
                 onClick = { index -> onTabSelected(index) },
             )
@@ -345,7 +358,11 @@ private fun TopBar(
 @OptIn(ExperimentalMaterialApi::class)
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun TimelineView(vacationList: List<VacationData>, onDelete: (VacationData) -> Unit) {
+fun TimelineView(
+    vacationList: List<VacationData>,
+    onDelete: (VacationData) -> Unit,
+    holidayList: Boolean
+) {
     val groupedVacations = vacationList.groupBy { vacation ->
         YearMonth.parse(vacation.startDate, DateTimeFormatter.ofPattern("d/MM/yyyy"))
     }
@@ -390,69 +407,82 @@ fun TimelineView(vacationList: List<VacationData>, onDelete: (VacationData) -> U
                         )
                         val cardBorderColor =
                             if (isStartDateToday || isEndDateToday) MaterialTheme.colorScheme.surface else Color.Transparent
-                        SwipeToDismissListItem(
-                            onEndToStart = {
-                                onDelete(item)
-                            },
-                            content = {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .wrapContentHeight(),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
+                        SwipeToDismissListItem(onEndToStart = {
+                            onDelete(item)
+                        }, content = {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .wrapContentHeight(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(start = 10.dp, end = 10.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
-                                    Column(
-                                        modifier = Modifier.padding(start = 10.dp, end = 10.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally
-                                    ) {
+                                    Text(
+                                        text = item.startDate.substringBefore("/"),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                                    )
+                                    if (!item.endDate.isNullOrEmpty()) { // Show the down icon and end date if endDate is present
+                                        Spacer(modifier = Modifier.height(5.dp))
+                                        Icon(
+                                            painter = painterResource(id = R.drawable.ic_down),
+                                            contentDescription = "down",
+                                            tint = gray
+                                        )
+                                        Spacer(modifier = Modifier.height(5.dp))
                                         Text(
-                                            text = item.startDate.substringBefore("/"),
+                                            text = item.endDate.substringBefore("/"),
                                             style = MaterialTheme.typography.labelSmall,
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.onSecondaryContainer
                                         )
-                                        if (!item.endDate.isNullOrEmpty()) { // Show the down icon and end date if endDate is present
-                                            Spacer(modifier = Modifier.height(5.dp))
-                                            Icon(
-                                                painter = painterResource(id = R.drawable.ic_down),
-                                                contentDescription = "down",
-                                                tint = gray
-                                            )
-                                            Spacer(modifier = Modifier.height(5.dp))
-                                            Text(
-                                                text = item.endDate.substringBefore("/"),
-                                                style = MaterialTheme.typography.labelSmall,
-                                                fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.onSecondaryContainer
-                                            )
-                                        }
                                     }
-                                    Column(
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                    ) {
+                                }
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                ) {
 
-                                        Card(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .height(if (item.endDate.isNullOrEmpty()) 70.dp else 90.dp)
-                                                .padding(10.dp)
-                                                .border(
-                                                    width = 1.dp,
-                                                    color = cardBorderColor,
-                                                    shape = RoundedCornerShape(10.dp)
-                                                ),
-                                            shape = RoundedCornerShape(10.dp),
-                                            colors = CardDefaults.cardColors(
-                                                containerColor = MaterialTheme.colorScheme.onTertiary,
-                                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                                            )
-                                        ) {
+                                    Card(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(if (item.endDate.isNullOrEmpty()) 70.dp else 90.dp)
+                                            .padding(10.dp)
+                                            .border(
+                                                width = 1.dp,
+                                                color = cardBorderColor,
+                                                shape = RoundedCornerShape(10.dp)
+                                            ),
+                                        shape = RoundedCornerShape(10.dp),
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = MaterialTheme.colorScheme.onTertiary,
+                                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                                        )
+                                    ) {
+                                        if (!holidayList) {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                Text(
+                                                    text = item.name,
+                                                    modifier = Modifier.padding(10.dp),
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    fontWeight = FontWeight.Bold,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                                ChipView(item.category)
+                                            }
+                                        } else {
                                             Text(
                                                 text = item.name,
-                                                modifier = Modifier
-                                                    .padding(10.dp)
-                                                    .fillMaxWidth(),
+                                                modifier = Modifier.padding(10.dp),
                                                 style = MaterialTheme.typography.bodyMedium,
                                                 fontWeight = FontWeight.Bold,
                                                 maxLines = 1,
@@ -460,10 +490,9 @@ fun TimelineView(vacationList: List<VacationData>, onDelete: (VacationData) -> U
                                             )
                                         }
                                     }
-
                                 }
-
-                            })
+                            }
+                        })
                     }
                 }
             }
@@ -471,11 +500,30 @@ fun TimelineView(vacationList: List<VacationData>, onDelete: (VacationData) -> U
     }
 }
 
+@SuppressLint("ResourceAsColor")
+@Composable
+fun ChipView(category: String) {
+    val colorInt =
+        if (category == "Vacation") R.color.blue else if (category == "Holiday") R.color.red else R.color.purple_200
+    Box(
+        modifier = Modifier
+            .wrapContentWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(color = colorResource(colorInt).copy(.25f))
+    ) {
+        Text(
+            text = category,
+            modifier = Modifier.padding(12.dp, 6.dp, 12.dp, 6.dp),
+            style = caption,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
 @Composable
 fun SwipeToDismissListItem(
-    modifier: Modifier = Modifier,
-    onEndToStart: () -> Unit = {},
-    content: @Composable () -> Unit
+    modifier: Modifier = Modifier, onEndToStart: () -> Unit = {}, content: @Composable () -> Unit
 ) {
 
     // 1. State is hoisted here
@@ -493,8 +541,7 @@ fun SwipeToDismissListItem(
                     SwipeToDismissBoxValue.Settled -> Color.Transparent
                     SwipeToDismissBoxValue.StartToEnd -> Color.Transparent
                     SwipeToDismissBoxValue.EndToStart -> Color.Red
-                },
-                label = "swipe"
+                }, label = "swipe"
             )
 
             Box(
@@ -523,8 +570,7 @@ fun SwipeToDismissListItem(
                 }
 
             }
-        }
-    ) {
+        }) {
         content()
     }
 
@@ -547,6 +593,3 @@ fun SwipeToDismissListItem(
         }
     }
 }
-
-
-

@@ -83,7 +83,11 @@ fun AddScreen(viewModel: AddViewModel = hiltViewModel(), navHostController: NavH
                         name = vacationName,
                         startDate = startDateString,
                         endDate = endDateString.ifEmpty { null },
-                        category = if (selectedTab == 0) "Sick" else "Vacation"
+                        category = if (viewModel.themeSetting.isFeatureEnabled) {
+                            if (selectedTab == 0) "Sick" else if (selectedTab == 2) "Holiday" else "Vacation"
+                        } else {
+                            if (selectedTab == 1) "Holiday" else "Vacation"
+                        }
                     )
                     viewModel.addVacation(vacationData)
                     navHostController.popBackStack()
@@ -127,6 +131,7 @@ private fun TopBar(
 ) {
     val sick = stringResource(R.string.sick)
     val vacation = stringResource(R.string.vacation)
+    val holiday = stringResource(R.string.holiday)
 
     Column(
         modifier = Modifier
@@ -200,7 +205,21 @@ private fun TopBar(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 CustomTab(
-                    items = listOf(sick, vacation),
+                    items = listOf(sick, vacation, holiday),
+                    selectedItemIndex = selectedTab,
+                    onClick = { index -> onTabSelected(index) },
+                )
+            }
+        } else {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 10.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                CustomTab(
+                    items = listOf(vacation, holiday),
                     selectedItemIndex = selectedTab,
                     onClick = { index -> onTabSelected(index) },
                 )
@@ -236,7 +255,9 @@ private fun TopBar(
                     }
                     Spacer(Modifier.height(10.dp))
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(start = 40.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 40.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(

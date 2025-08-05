@@ -61,6 +61,7 @@
     <string name="sick">Sick</string>
     <string name="vacation">Vacation</string>
     <string name="holiday">Holiday</string>
+    <string name="holidays">Holidays</string>
     <string name="name">Name</string>
     <string name="daysUntilVacation">Days Until Vacation</string>
     <string name="daysSinceVacation">Days Since Vacation</string>

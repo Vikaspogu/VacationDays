@@ -26,4 +26,7 @@
     <color name="dateTimeRangePickerHeaderTextColor">@android:color/black</color>
     <color name="dateTimeRangePickerTitleTextColor">@android:color/black</color>
 
+    <color name="purple_200">#FFBB86FC</color>
+    <color name="red">#EB5757</color>
+    <color name="blue">#006AF6</color>
 </resources>
